@@ -15,6 +15,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 class Attention(nn.Module):
     def __init__(self, config):
         super(Attention, self).__init__()
@@ -31,12 +32,12 @@ class Attention(nn.Module):
         self.proj_drop = Dropout(config.transformer.attention_dropout_rate)
 
         self.softmax = Softmax(dim=-1)
-    
+
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
-    
+
     def forward(self, hidden_states):
         mixed_query_layer   = self.query(hidden_states)
         mixed_key_layer     = self.key(hidden_states)
@@ -84,6 +85,7 @@ class Mlp(nn.Module):
         x = self.fc2(x)
         x = self.dropout(x)
         return x
+
 
 class Embeddings(nn.Module):
     """Construct the embeddings from patch, position embeddings
@@ -198,6 +200,7 @@ class Part_Attention(nn.Module):
         _, max_idx = last_map.max(2)
         return _, max_idx
 
+
 class EncoderPSM(nn.Module):
     """ TransFG: Part Select Module
     """
@@ -232,7 +235,7 @@ class EncoderPSM(nn.Module):
         part_encoded = self.part_norm(part_states)
         return part_encoded
 
-    
+
 class Encoder(nn.Module):
     def __init__(self, config):
         super(Encoder, self).__init__()
@@ -284,7 +287,6 @@ class VisionTransformer(nn.Module):
             self.head_dist = Linear(config.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
         else:
             self.head_dist = None
-        
     
     def forward_features(self, x):
         part_tokens = self.transformer(x)
@@ -314,12 +316,12 @@ class VisionTransformer(nn.Module):
                     ntok_new -= 1
                 else:
                     posemb_tok, posemb_grid = posemb[:, :0], posemb[0]
-            
+
                 gs_old = int(np.sqrt(len(posemb_grid)))
                 gs_new = int(np.sqrt(ntok_new))
                 print('load_pretrained: grid-size from %s to %s' % (gs_old, gs_new))
                 posemb_grid = posemb_grid.reshape(gs_old, gs_old, -1)
-
+                
                 zoom = (gs_new / gs_old, gs_new / gs_old, 1)
                 posemb_grid = ndimage.zoom(posemb_grid, zoom, order=1)
                 posemb_grid = posemb_grid.reshape(1, gs_new * gs_new, -1)
@@ -344,6 +346,7 @@ class VisionTransformer(nn.Module):
                 for bname, block in self.transformer.embeddings.hybrid_model.body.named_children():
                     for uname, unit in block.named_children():
                         unit.load_from(weights, n_block=bname, n_unit=uname)
+
 
 def con_loss(features, labels):
     B, _ = features.shape
